@@ -355,6 +355,7 @@ function applyAppearance() {
 function fullRedraw() { recalcProbeWorldX(); drawUzCanvas(); drawDisplayCanvas(); updateUI(); }
 
 function onParamChange() {
+    const prevGroove = { weldType: state.weldType, H: state.H, b: state.b, beta: state.beta, c: state.c };
     state.refLevel = selRefLevel.value;
     state.H = +sliderH.value;
     state.alpha = +sliderAlpha.value;
@@ -383,6 +384,25 @@ function onParamChange() {
     state.Wroot = +sliderWroot.value;
     state.WfaceOffset = +sliderWfaceOffset.value;
     state.WrootOffset = +sliderWrootOffset.value;
+    const grooveChanged = (
+        state.weldType !== prevGroove.weldType ||
+        state.H !== prevGroove.H ||
+        state.b !== prevGroove.b ||
+        state.beta !== prevGroove.beta ||
+        state.c !== prevGroove.c
+    );
+    if (grooveChanged) {
+        const fg = getGrooveGeometryAtSurface('face');
+        const rg = getGrooveGeometryAtSurface('root');
+        state.Wface = fg.width;
+        state.Wroot = rg.width;
+        state.WfaceOffset = fg.center;
+        state.WrootOffset = rg.center;
+        sliderWface.value = state.Wface;
+        sliderWroot.value = state.Wroot;
+        sliderWfaceOffset.value = state.WfaceOffset;
+        sliderWrootOffset.value = state.WrootOffset;
+    }
     state.edgeOffset = +sliderEdgeOffset.value;
     state.axisKink = +sliderAxisKink.value;
     state.GfAngle = +sliderGfAngle.value;

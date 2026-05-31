@@ -116,13 +116,40 @@ function getGroovePoints() {
     return applyAssemblyDefects(points);
 }
 
+function getGrooveGeometryAtSurface(surface) {
+    const { H, weldType, b, beta, c } = state;
+    const halfB = b / 2;
+    const betaRad = beta * Math.PI / 180;
+    const tanHalf = Math.tan(betaRad / 2);
+    const land = Math.min(Math.max(c, 0), H * 0.35);
+    const isFace = surface === 'face';
+    const leftTopX = halfB + (H - land) * tanHalf;
+    const midThick = Math.max(0, (H - land) / 2);
+    const sideX = halfB + midThick * tanHalf;
+    switch (weldType) {
+        case 'V_single':
+            if (isFace) return { width: leftTopX + halfB, center: (halfB - leftTopX) / 2 };
+            return { width: b, center: 0 };
+        case 'V_double':
+            if (isFace) return { width: 2 * leftTopX, center: 0 };
+            return { width: b, center: 0 };
+        case 'X_single':
+            return { width: sideX + halfB, center: (halfB - sideX) / 2 };
+        case 'X_double':
+            return { width: 2 * sideX, center: 0 };
+    }
+    return { width: b, center: 0 };
+}
+
 function getMinAbsL() {
     const surface = getEntrySurface();
-    const halfWidth = (surface === 'face') ? state.Wface / 2 : state.Wroot / 2;
+    const halfW = (surface === 'face') ? state.Wface / 2 : state.Wroot / 2;
     const gVal = (surface === 'face') ? state.Gf : state.Gr;
     if (gVal <= 0) return 0;
     const totalArrow = Math.max(0, state.piezoArrow || getProbeData().baseArrow);
-    return state.side.endsWith('left') ? halfWidth + totalArrow : -(halfWidth + totalArrow);
+    const offset = (surface === 'face') ? state.WfaceOffset : state.WrootOffset;
+    if (state.side.endsWith('left')) return offset + halfW + totalArrow;
+    return offset - halfW - totalArrow;
 }
 
 function getBeamOrigin() {
