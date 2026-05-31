@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>УЗК сварных швов – профессиональный симулятор</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-left"></div>
+        <h1>Симулятор УЗК сварных швов</h1>
+        <div class="sandwich-menu">
+            <div class="sandwich-btn" id="sandwichBtn">☰</div>
+            <div class="sandwich-dropdown" id="sandwichDropdown">
+                <div class="param-row"><label>Тема</label><div style="display:flex;gap:6px;grid-column:2/4;"><button id="btnThemeDark" style="flex:1;font-size:0.7rem;padding:4px 0;">🌑 Тёмная</button><button id="btnThemeLight" style="flex:1;font-size:0.7rem;padding:4px 0;">☀️ Светлая</button></div></div>
+                <div class="param-row"><label>Оттенок</label><input type="range" id="sliderHue" min="0" max="359" value="28" step="1"><span class="val" id="valHue">28</span></div>
+                <div class="param-row"><label>Размер шрифта</label><input type="range" id="fontScaleSlider" min="80" max="150" value="100" step="5"><span id="fontScaleValue" class="val">100%</span></div>
+            </div>
+        </div>
+    </header>
+    <div class="workspace">
+        <div class="left-column">
+            <div class="canvas-wrap" id="canvasWrap">
+                <canvas id="uzCanvas"></canvas>
+                <div class="resizer-horizontal resizer-canvas" id="resizerCanvas"></div>
+            </div>
+            <div class="zoom-bar">
+                <button id="zoomOutBtn">−</button><button id="zoomResetBtn">Сброс</button><button id="zoomInBtn">+</button>
+                <span style="font-size:0.7rem;">🖱️ Колёсико / тач</span>
+            </div>
+            <div class="a-scan-container">
+                <div class="a-scan-header">
+                    📊 A-SCAN · ЭКРАН ДЕФЕКТОСКОПА
+                    <select id="selAscanXAxis" style="margin-left:12px;padding:2px 6px;font-size:0.7rem;background:var(--input-bg);color:var(--text-strong);border:1px solid var(--border);border-radius:6px;">
+                        <option value="path">Ось X: Акустический путь (S)</option>
+                        <option value="depth">Ось X: Глубина залегания (Y)</option>
+                    </select>
+                </div>
+                <div class="ascan-info">
+                    <div class="ascan-info-item"><span class="label">X (от ПЭП)</span><span class="value" id="ascanInfoX">—</span></div>
+                    <div class="ascan-info-item"><span class="label">Y (глубина)</span><span class="value" id="ascanInfoY">—</span></div>
+                    <div class="ascan-info-item"><span class="label">S (путь)</span><span class="value" id="ascanInfoS">—</span></div>
+                    <div class="ascan-info-item"><span class="label">ΔA (превыш.)</span><span class="value" id="ascanInfoA">—</span></div>
+                </div>
+                <div class="canvas-wrap-a" id="canvasWrapA"><canvas id="displayCanvas"></canvas></div>
+            </div>
+            <div class="resizer resizer-left" id="resizerLeft"></div>
+        </div>
+        <div class="right-panel">
+            <div class="section">
+                <h3>📐 Параметры контроля <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row">
+                        <label>Толщина H<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Толщина контролируемой пластины в миллиметрах. Определяет глубину проникновения луча и количество отражений.</span></span></label>
+                        <input type="range" id="sliderH" min="6" max="50" value="20" step="0.1"><span class="val" id="valH">20</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Угол α°<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Угол ввода ультразвукового луча относительно нормали к поверхности. Определяет траекторию луча в материале.</span></span></label>
+                        <input type="range" id="sliderAlpha" min="35" max="75" value="65" step="0.1"><span class="val" id="valAlpha">65</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Расст. L<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Расстояние от оси шва до точки ввода преобразователя. Положительное — справа, отрицательное — слева.</span></span></label>
+                        <input type="range" id="sliderL" min="-150" max="150" value="28" step="0.1"><span class="val" id="valL">28</span>
+                    </div>
+                    <div class="param-row"><label>Положение</label><select id="selSide"><option value="top-left">Верх слева</option><option value="top-right">Верх справа</option><option value="bottom-left">Низ слева</option><option value="bottom-right">Низ справа</option></select></div>
+                    <div class="param-row"><label>Режим</label><select id="selMode"><option value="direct">Прямой луч</option><option value="reflected">Однократно отражённый</option><option value="realistic">Реалистичный (многократный)</option></select></div>
+                    <div class="param-row"><label>ПЭП</label><select id="selProbe"><option value="std">Стандартный</option><option value="mini">Малогабаритный</option></select></div>
+                    <div class="param-row"><label>Форма пластины</label><select id="selPiezoShape"><option value="round">Круглая</option><option value="rect">Прямоугольная</option></select></div>
+                    <div class="param-row" id="rowPiezoDiam">
+                        <label>Диаметр Ø<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Диаметр круглой пьезопластины. Влияет на ближнюю зону N = D²/(4λ) и диаграмму направленности.</span></span></label>
+                        <input type="range" id="sliderPiezoDiam" min="2" max="15" value="12" step="0.1"><span class="val" id="valPiezoDiam">12</span>
+                    </div>
+                    <div class="param-row" id="rowPiezoA" style="display:none;">
+                        <label>Сторона a<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Длина стороны прямоугольной пластины. Эквивалентный диаметр D_eq = √(4ab/π).</span></span></label>
+                        <input type="range" id="sliderPiezoA" min="2" max="15" value="10" step="0.1"><span class="val" id="valPiezoA">10</span>
+                    </div>
+                    <div class="param-row" id="rowPiezoB" style="display:none;">
+                        <label>Сторона b<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Ширина стороны прямоугольной пластины. Эквивалентный диаметр D_eq = √(4ab/π).</span></span></label>
+                        <input type="range" id="sliderPiezoB" min="2" max="15" value="10" step="0.1"><span class="val" id="valPiezoB">10</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Стрела<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Расстояние от точки выхода ультразвукового луча до передней грани (торца) корпуса преобразователя, измеренное вдоль рабочей поверхности. Используется для точного вычисления координат дефекта в металле.</span></span></label>
+                        <input type="range" id="sliderPiezoArrow" min="2" max="25" value="10" step="1"><span class="val" id="valPiezoArrow">10</span>
+                    </div>
+                    <div class="param-row"><label>Материал</label><select id="selMaterial"><option value="st3">Ст3 (конструкционная)</option><option value="st20">Ст20 (углеродистая)</option><option value="10hsnd">10ХСНД (низколегированная)</option><option value="09g2s">09Г2С (низколегированная)</option><option value="12x18n10t">12Х18Н10Т (нержавеющая)</option><option value="aluminum">Алюминий АМг6</option><option value="titanium">Титан ВТ1-0</option></select></div>
+                    <div class="param-row"><label>Частота ПЭП</label><select id="selFrequency"><option value="1.8">1.8 МГц</option><option value="2.5" selected>2.5 МГц</option><option value="5.0">5.0 МГц</option><option value="10.0">10.0 МГц</option></select></div>
+                    <div class="param-row">
+                        <label>φ раскр.<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Угол раскрытия диаграммы направленности. Определяет ширину ультразвукового пучка.</span></span></label>
+                        <input type="range" id="sliderPhi" min="0" max="15" value="8" step="0.1"><span class="val" id="valPhi">8</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Gain dB<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Основное усиление дефектоскопа в децибелах (0–120 dB). Увеличивает амплитуду всех принимаемых сигналов.</span></span></label>
+                        <input type="range" id="sliderGain" min="0" max="120" value="40" step="0.5"><span class="val" id="valGain">40</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Усил. отр. dB<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Дополнительное усиление только для однократно/многократно отражённых лучей. Помогает видеть слабые отражения при большой толщине и сложной геометрии.</span></span></label>
+                        <input type="range" id="sliderReflectionBoost" min="0" max="40" value="0" step="0.5"><span class="val" id="valReflectionBoost">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>🔧 Геометрия шва <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row"><label>Тип разделки<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Форма подготовки кромок под сварку: V-образная (одна фаска), X-образная (две фаски с обеих сторон). Односторонняя/двухсторонняя определяет наличие корневого валика.</span></span></label><select id="selWeldType"><option value="V_single">V-образная (односторонняя)</option><option value="V_double">V-образная (двухсторонняя)</option><option value="X_single">X-образная (односторонняя)</option><option value="X_double">X-образная (двухсторонняя)</option></select></div>
+                    <div class="param-row"><label>Зазор b<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Расстояние между свариваемыми кромками в миллиметрах. Влияет на форму сварного шва и траекторию ультразвукового луча.</span></span></label><input type="range" id="sliderB" min="0" max="12" value="2" step="0.1"><span class="val" id="valB">2</span></div>
+                    <div class="param-row"><label>Угол β°<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Угол скоса кромки (угол разделки) в градусах. Определяет ширину сварного шва и доступность для контроля.</span></span></label><input type="range" id="sliderBeta" min="0" max="120" value="30" step="0.1"><span class="val" id="valBeta">30</span></div>
+                    <div class="param-row"><label>Притупл. c<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Притупление кромки — нескошенная часть торца детали в миллиметрах. Предотвращает прожог при сварке.</span></span></label><input type="range" id="sliderC" min="0" max="5" value="1" step="0.1"><span class="val" id="valC">1</span></div>
+                    <div class="param-row"><label>Ширина Wf<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Ширина лицевого валика (усиления шва с лицевой стороны) в миллиметрах.</span></span></label><input type="range" id="sliderWface" min="2" max="90" value="8" step="0.1"><span class="val" id="valWface">8</span></div>
+                    <div class="param-row"><label>Смещение Wf X<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Смещение центра лицевого валика относительно оси шва в миллиметрах. Положительное — вправо, отрицательное — влево.</span></span></label><input type="range" id="sliderWfaceOffset" min="-80" max="80" value="0" step="0.1"><span class="val" id="valWfaceOffset">0.0</span></div>
+                    <div class="param-row"><label>Высота Gf<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Высота лицевого валика (выпуклость усиления) в миллиметрах. Влияет на отражение луча от поверхности.</span></span></label><input type="range" id="sliderGf" min="0" max="5.5" value="1.5" step="0.1"><span class="val" id="valGf">1.5</span></div>
+                    <div class="param-row"><label>Форма валика Gf<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Профиль лицевого валика: плавная (широкая дуга), средняя, острая (узкий пик), прямоугольная (плоская).</span></span></label><select id="selGfShape"><option value="smooth">Плавная</option><option value="medium">Средняя</option><option value="sharp">Острая</option><option value="rectangular">Прямоугольная</option></select></div>
+                    <div class="param-row"><label>Угол Gf °<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Угол поворота лицевого валика относительно оси шва (градусы). Позволяет моделировать несимметричное усиление.</span></span></label><input type="range" id="sliderGfAngle" min="-30" max="30" value="0" step="1"><span class="val" id="valGfAngle">0</span></div>
+                    <div class="param-row"><label>Ширина Wr<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Ширина корневого валика (усиления с обратной стороны) в миллиметрах.</span></span></label><input type="range" id="sliderWroot" min="2" max="90" value="6" step="0.1"><span class="val" id="valWroot">6</span></div>
+                    <div class="param-row"><label>Смещение Wr X<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Смещение центра корневого валика относительно оси шва в миллиметрах.</span></span></label><input type="range" id="sliderWrootOffset" min="-80" max="80" value="0" step="0.1"><span class="val" id="valWrootOffset">0.0</span></div>
+                    <div class="param-row"><label>Высота Gr<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Высота корневого валика в миллиметрах.</span></span></label><input type="range" id="sliderGr" min="0" max="5.5" value="1.5" step="0.1"><span class="val" id="valGr">1.5</span></div>
+                    <div class="param-row"><label>Форма валика Gr<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Профиль корневого валика.</span></span></label><select id="selGrShape"><option value="smooth">Плавная</option><option value="medium">Средняя</option><option value="sharp">Острая</option><option value="rectangular">Прямоугольная</option></select></div>
+                    <div class="param-row"><label>Угол Gr °<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Угол поворота корневого валика относительно оси шва (градусы).</span></span></label><input type="range" id="sliderGrAngle" min="-30" max="30" value="0" step="1"><span class="val" id="valGrAngle">0</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>🔧 Дефекты сборки <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row"><label>Смещ. кромок δ<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Вертикальное смещение кромок свариваемых элементов (мм). Положительное — правая сторона выше, отрицательное — левая выше.</span></span></label><input type="range" id="sliderEdgeOffset" min="-5" max="5" value="0" step="0.1"><span class="val" id="valEdgeOffset">0.0</span></div>
+                    <div class="param-row"><label>Перелом оси θ<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Угловой перелом оси сварных элементов (градусы). Положительный — правая сторона повёрнута по часовой стрелке.</span></span></label><input type="range" id="sliderAxisKink" min="-10" max="10" value="0" step="0.1"><span class="val" id="valAxisKink">0.0</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>⚠️ Активный дефект <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row"><label>Выбор</label><select id="selActiveDefect"><option value="-1">Нет активного</option></select></div>
+                    <div class="param-row"><label>Тип</label><span class="val" id="valDefType">—</span></div>
+                    <div class="param-row"><label>Размер</label><input type="range" id="sliderDefSize" min="0.5" max="20" value="2" step="0.1"><span class="val" id="valDefSize">2</span></div>
+                    <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:-4px; text-align:center; margin-bottom:6px;"><span id="defectSizeHint">Выберите дефект</span></div>
+                    <div class="param-row"><label>Поворот°</label><input type="range" id="sliderDefAngle" min="0" max="360" value="0" step="1"><span class="val" id="valDefAngle">0</span></div>
+                    <div class="btn-row">
+                        <button class="btn-add" id="btnAddPore">+ Пора</button><button class="btn-add" id="btnAddSlag">+ Шлак</button>
+                        <button class="btn-add" id="btnAddCrack">+ Трещина</button><button class="btn-add" id="btnAddLOF">+ Неспл.</button>
+                        <button class="btn-del" id="btnDelDefect">Удалить</button>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>🎚️ Уровни чувствительности <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row"><label>Опорный уровень<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Уровень, относительно которого рассчитывается превышение амплитуды ΔA. Используется для оценки значимости дефекта.</span></span></label><select id="selRefLevel"><option value="search">Поисковый</option><option value="control">Контрольный</option><option value="reject">Браковочный</option></select></div>
+                    <div class="param-row"><label>Брак.<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Браковочный уровень в децибелах. Дефекты с амплитудой выше этого уровня требуют отклонения изделия.</span></span></label><input type="range" id="sliderGateReject" min="-40" max="0" value="-8" step="1"><span class="val" id="valGateReject">-8</span></div>
+                    <div class="param-row"><label>Контр.<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Контрольный уровень в децибелах. Дефекты между контрольным и браковочным требуют дополнительной оценки.</span></span></label><input type="range" id="sliderGateControl" min="-40" max="0" value="-14" step="1"><span class="val" id="valGateControl">-14</span></div>
+                    <div class="param-row"><label>Поиск.<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Поисковый уровень в децибелах. Минимальная амплитуда для обнаружения дефекта. Сигналы ниже этого уровня игнорируются.</span></span></label><input type="range" id="sliderGateSearch" min="-40" max="0" value="-22" step="1"><span class="val" id="valGateSearch">-22</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>⏱️ Стробы<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Временные ворота для фильтрации сигналов по акустическому пути. Сигналы вне активных стробов игнорируются. Перетаскивайте линии на A-scan для позиционирования.</span></span> <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row">
+                        <label>Развёртка<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Ширина развёртки A-scan в миллиметрах. Определяет максимальное отображаемое расстояние по оси X.</span></span></label>
+                        <input type="range" id="sliderSweepWidth" min="50" max="500" value="150" step="10"><span class="val" id="valSweepWidth">150</span>
+                    </div>
+                    <div class="param-row">
+                        <label><input type="checkbox" id="chkGate1" checked style="width:auto;height:auto;margin-right:4px;">Строб 1</label>
+                        <input type="color" id="colorGate1" value="#64c8ff" style="width:40px;height:24px;border:1px solid var(--border);border-radius:4px;cursor:pointer;">
+                    </div>
+                    <div class="param-row"><label>Начало (мм)</label><input type="range" id="sliderGate1Start" min="0" max="200" value="0" step="1"><span class="val" id="valGate1Start">0</span></div>
+                    <div class="param-row"><label>Конец (мм)</label><input type="range" id="sliderGate1End" min="0" max="200" value="50" step="1"><span class="val" id="valGate1End">50</span></div>
+                    <div class="param-row">
+                        <label><input type="checkbox" id="chkGate2" style="width:auto;height:auto;margin-right:4px;">Строб 2</label>
+                        <input type="color" id="colorGate2" value="#ffc864" style="width:40px;height:24px;border:1px solid var(--border);border-radius:4px;cursor:pointer;">
+                    </div>
+                    <div class="param-row"><label>Начало (мм)</label><input type="range" id="sliderGate2Start" min="0" max="200" value="50" step="1"><span class="val" id="valGate2Start">50</span></div>
+                    <div class="param-row"><label>Конец (мм)</label><input type="range" id="sliderGate2End" min="0" max="200" value="100" step="1"><span class="val" id="valGate2End">100</span></div>
+                    <div class="param-row">
+                        <label><input type="checkbox" id="chkGate3" style="width:auto;height:auto;margin-right:4px;">Строб 3</label>
+                        <input type="color" id="colorGate3" value="#c864ff" style="width:40px;height:24px;border:1px solid var(--border);border-radius:4px;cursor:pointer;">
+                    </div>
+                    <div class="param-row"><label>Начало (мм)</label><input type="range" id="sliderGate3Start" min="0" max="200" value="100" step="1"><span class="val" id="valGate3Start">100</span></div>
+                    <div class="param-row"><label>Конец (мм)</label><input type="range" id="sliderGate3End" min="0" max="200" value="150" step="1"><span class="val" id="valGate3End">150</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>📍 Координаты дефекта <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row"><label>X (от ПЭП)<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Горизонтальное расстояние от точки ввода преобразователя до дефекта в миллиметрах.</span></span></label><span class="val" id="valDefX">—</span></div>
+                    <div class="param-row"><label>Y (глубина)<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Глубина залегания дефекта от поверхности ввода луча в миллиметрах.</span></span></label><span class="val" id="valDefY">—</span></div>
+                    <div class="param-row"><label>S (Акустический путь)<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Длина пути ультразвукового луча от преобразователя до дефекта в миллиметрах. Учитывает все отражения.</span></span></label><span class="val" id="valDefZ">—</span></div>
+                    <div class="param-row"><label>ΔA (превышение)<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Превышение амплитуды сигнала от дефекта над опорным уровнем в децибелах. Положительное значение — выше опорного, отрицательное — ниже.</span></span></label><span class="val" id="valDefA">—</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <h3>📊 Статус <span class="toggle-icon">▼</span></h3>
+                <div class="section-content">
+                    <div class="param-row"><label>Материал</label><span class="val" id="valMaterialName">—</span></div>
+                    <div class="param-row">
+                        <label>Скорость c<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Скорость распространения поперечных ультразвуковых волн в материале (мм/мкс). Зависит от типа материала.</span></span></label>
+                        <span class="val" id="valSpeedOfSound">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Частота f<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Рабочая частота преобразователя в мегагерцах. Влияет на длину волны и разрешающую способность.</span></span></label>
+                        <span class="val" id="valFrequency">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Длина волны λ<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Длина ультразвуковой волны: λ = c/f. Определяет минимальный размер выявляемых дефектов.</span></span></label>
+                        <span class="val" id="valWavelength">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Затухание α<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Коэффициент затухания ультразвука в материале (dB/см). Определяет потери амплитуды на расстоянии.</span></span></label>
+                        <span class="val" id="valAttenuation">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Ближняя зона N<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Зона Френеля: N = D²/(4λ). В этой зоне амплитуда нестабильна из-за интерференции. Для прямоугольной пластины используется эквивалентный диаметр D_eq = √(4ab/π).</span></span></label>
+                        <span class="val" id="valN">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Дальняя зона<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Начинается с расстояния N. Амплитуда убывает пропорционально расстоянию (~6dB на удвоение).</span></span></label>
+                        <span class="val" id="valFarZone">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>До 1-го деф.<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Акустический путь до первого обнаруженного дефекта в миллиметрах.</span></span></label>
+                        <span class="val" id="valFirstDist">—</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Обнаружено<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Количество дефектов, обнаруженных ультразвуковым лучом в текущей конфигурации.</span></span></label>
+                        <span class="val" id="valDetected">0</span>
+                    </div>
+                    <div class="param-row">
+                        <label>Затенение<span class="tooltip-wrapper"><span class="tooltip-trigger">ⓘ</span><span class="tooltip-content">Процент ослабления сигнала из-за экранирования другими дефектами на пути луча.</span></span></label>
+                        <span class="val" id="valShadow">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bottom-panel">
+        <div class="indicator"><span>Обнаружение:</span><div class="dot" id="detectDot"></div><span id="detectText">Нет сигнала</span></div>
+        <div class="legend">
+            <span><span style="background:#66ff88; width:10px; height:3px; display:inline-block;"></span> Прямой</span>
+            <span><span style="background:#cc88ff; width:10px; height:3px; display:inline-block;"></span> Отражённый</span>
+            <span><span style="background:#ff9944; width:10px; height:3px; border:1px dashed #ff9944; display:inline-block;"></span> Диагр.</span>
+            <span><span style="background:#ff5f57; width:10px; height:3px; display:inline-block;"></span> Брак.</span>
+            <span><span style="background:#ffd166; width:10px; height:3px; display:inline-block;"></span> Контр.</span>
+            <span><span style="background:#4cc9f0; width:10px; height:3px; display:inline-block;"></span> Поиск.</span>
+            <span><span style="background:#ffaa66; width:10px; height:3px; display:inline-block;"></span> Отраж. от деф.</span>
+            <span><span style="background:#ff6644; width:10px; height:3px; display:inline-block;"></span> Ступенька</span>
+        </div>
+    </div>
+    <script src="js/constants.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>
